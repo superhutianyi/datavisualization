@@ -23,8 +23,6 @@ Imagine you are the data scientist at a respected media outlet, say the “New Y
 I will put some visualization here. But if you are interested, check out in the folder named "Olympics Medals".
 
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Olympics%20Medals/windrose.png)
-![image](https://github.com/superhutianyi/datavisualization/blob/master/Olympics%20Medals/scatter.png)
-![image](https://github.com/superhutianyi/datavisualization/blob/master/Olympics%20Medals/data%20table.png)
 
 ## Assignment 2: Manhattan Violation Distribution
 (1) Violation Code and Fine Amounts
@@ -36,7 +34,6 @@ I will put some visualization here. But if you are interested, check out in the 
 ### Results:
 I will put some visualization here. But if you are interested, check out in the folder named "Manhattan Violation".
 
-![image](https://github.com/superhutianyi/datavisualization/blob/master/Manhattan%20Violation/map.png)
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Manhattan%20Violation/interactivemap1.png)
 
 ## Assignment 3: Text Mining Kickstarter Projects
@@ -47,7 +44,6 @@ I will put some visualization here. But if you are interested, check out in the 
 ### Results:
 I will put some visualization here. But if you are interested, check out in the folder named "Text Mining".
 
-![image](https://github.com/superhutianyi/datavisualization/blob/master/Text%20Mining/Wordcloud.png)
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Text%20Mining/SentimentAnalysis.png)
 
 ## Assignment 4: Network Analysis of U.S. Senate Tweets
