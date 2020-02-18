@@ -2,7 +2,7 @@
 
 Created and completed by Tianyi Hu
 
-## Assignment 1: Using ggplot2 for Visualization: Summer Olympics Medals over Time
+## Assignment 1: Summer Olympics Medals over Time (using ggplot)
 
 (1) Medal Counts over Time
 
