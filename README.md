@@ -13,7 +13,7 @@ Created and completed by Tianyi Hu
 (4) Data Table
 
 ### Results:
-I will put some visualization here. But if you are interested, check out in the folder named "Olympics Medals".
+I will put some visualization here. But if you are interested, check it out in the folder named "Olympics Medals".
 
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Olympics%20Medals/windrose.png)
 
@@ -25,7 +25,7 @@ I will put some visualization here. But if you are interested, check out in the 
 (3) Map by Precincts (Number of tickets, total fines, and average fines)(Interactive/Cluster)
 
 ### Results:
-I will put some visualization here. But if you are interested, check out in the folder named "Manhattan Violation".
+I will put some visualization here. But if you are interested, check it out in the folder named "Manhattan Violation".
 
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Manhattan%20Violation/interactivemap1.png)
 
@@ -35,7 +35,7 @@ I will put some visualization here. But if you are interested, check out in the 
 (2) Sentiment Analysis
 
 ### Results:
-I will put some visualization here. But if you are interested, check out in the folder named "Text Mining".
+I will put some visualization here. But if you are interested, check it out in the folder named "Text Mining".
 
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Text%20Mining/SentimentAnalysis.png)
 
@@ -47,6 +47,6 @@ I will put some visualization here. But if you are interested, check out in the 
 (3) Identifying Mentions
 
 ### Results:
-I will put some visualization here. But if you are interested, check out in the folder named "Network Analysis".
+I will put some visualization here. But if you are interested, check it out in the folder named "Network Analysis".
 
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Network%20Analysis/Network.png)
