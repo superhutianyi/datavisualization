@@ -35,3 +35,7 @@ I will put some visualization here. But if you are interested, check out in the 
 
 #### Results:
 I will put some visualization here. But if you are interested, check out in the folder named "Manhattan Violation".
+
+![image](https://github.com/superhutianyi/datavisualization/blob/master/Manhattan%20Violation/map.png)
+![image](https://github.com/superhutianyi/datavisualization/blob/master/Manhattan%20Violation/interactivemap1.png)
+![image](https://github.com/superhutianyi/datavisualization/blob/master/Manhattan%20Violation/interactivemap2.png)
