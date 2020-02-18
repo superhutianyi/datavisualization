@@ -20,9 +20,18 @@ Imagine you are the data scientist at a respected media outlet, say the “New Y
 (6) Data Table
 
 #### Results:
-I will put some visualization here. But if you are interested, check out it in the folder named "Olympics Medals".
+I will put some visualization here. But if you are interested, check out in the folder named "Olympics Medals".
 
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Olympics%20Medals/windrose.png)
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Olympics%20Medals/scatter.png)
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Olympics%20Medals/data%20table.png)
 
+### Assignment 2: Manhattan Violation Distribution
+(1) Violation Code and Fine Amounts
+
+(2) Average amount of fine by vehicle
+
+(3) Map by Precincts (Number of tickets, total fines, and average fines)(Interactive/Cluster)
+
+#### Results:
+I will put some visualization here. But if you are interested, check out in the folder named "Manhattan Violation".
