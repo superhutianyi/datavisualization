@@ -4,20 +4,15 @@ Created and completed by Tianyi Hu
 
 Some work regarding to data visualization
 
-## Assignment 1: Using ggplot2 for Visualization: Summer Olympics Medals over Time
-Imagine you are the data scientist at a respected media outlet, say the “New York Times”. For the upcoming Olympics coverage next year, your editor-in-chief asks you to analyze some data on the history of Summer Olympics Medals by Year, Country, Event and Gender and prepare some data visualizations in which you outline the main patterns around which to base the story.
+## Assignment 1: Using ggplot2 for Visualization: Summer Olympics Medals over Timeata visualizations in which you outline the main patterns around which to base the story.
 
 (1) Medal Counts over Time
 
 (2) Medal Counts Adjusted by Population, GDP
 
-(3) Host Country Advantage
+(3) Make Two Plots Interactive
 
-(4) Most Successful Athletes
-
-(5) Make Two Plots Interactive
-
-(6) Data Table
+(4) Data Table
 
 ### Results:
 I will put some visualization here. But if you are interested, check out in the folder named "Olympics Medals".
