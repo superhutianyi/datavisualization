@@ -1,0 +1,616 @@
+---
+title: "QMSS: DataVisaulization_HW3"
+course: "QMSS-G5063-2019 Data Vizualization"
+author: Tianyi Hu
+date: 2019-04-08
+output: html_document
+---
+
+```{r Setup, include=FALSE, results='hide', warning=FALSE}
+library(knitr)
+opts_chunk$set(
+               cache.path="cache/",
+               cache=FALSE,
+               echo=TRUE,
+               message=FALSE,
+               warning=FALSE)  
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Text Mining Kickstarter Projects
+### 1. Identifying Successful Projects
+
+#### a) Success by Category
+
+There are several ways to identify success of a project:
+
+State (state): Whether a campaign was successful or not.
+Pledged Amount (pledged)
+Achievement Ratio: Create a variable achievement_ratio by calculating the percentage of the original monetary goal reached by the actual amount pledged (that is pledged\goal *100).
+Number of backers (backers_count)
+How quickly the goal was reached (difference between launched_at and state_changed_at) for those campaigns that were successful.
+Use one or more of these measures to visually summarize which categories were most successful in attracting funding on kickstarter. Briefly summarize your findings.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+kickstarter<-read.csv("kickstarter_projects.csv")
+suc_category <- kickstarter %>% 
+  filter(state == "successful") %>%
+  mutate(number=1) %>%
+  group_by(top_category) %>%
+  summarize(Times = length(number)) %>%
+  arrange(desc(.$Times)) 
+ggplot(suc_category, aes(x =reorder((top_category),-Times), y = Times)) +
+  geom_bar(stat = "identity",fill="bisque") +
+  labs(x="Categories in kickstarter",y="Number of successful projects in kickstarter",title = "Top 15 successful categories in kickstarter") +
+  theme(panel.grid = element_blank(),panel.background = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),axis.text.x = element_text(size = 7,angle = 30,hjust = 1))
+```
+From the table above, we could learn that th e most successful category in kickstarter is music, the second one is film & video, which means people tend to spend money investing entertainment areas, probably because this area is familiar to most of people. Journalism and plotography are not popular in kickstarter, probably because that it is more difficult to completely appreciate the works and production in photography and journalism.
+
+### 2. Writing your success story
+
+Each project contains a blurb -- a short description of the project. While not the full description of the project, the short headline is arguably important for inducing interest in the project (and ultimately popularity and success). Let's analyze the text.
+
+#### a) Cleaning the Text and Word Cloud
+
+To reduce the time for analysis, select the 1000 most successful projects and a sample of 1000 unsuccessful projects. Use the cleaning functions introduced in lecture (or write your own in addition) to remove unnecessary words (stop words), syntax, punctuation, numbers, white space etc. Note, that many projects use their own unique brand names in upper cases, so try to remove these fully capitalized words as well (since we are aiming to identify common words across descriptions). Stem the words left over and complete the stems. Create a document-term-matrix.
+
+Provide a word cloud of the most frequent or important words (your choice which frequency measure you choose) among the most successful projects.
+
+```{r}
+#2a
+library(tm)
+library(qdapRegex)
+library(tidytext)
+library(dplyr)
+suc_kickstarter<-kickstarter %>%
+  filter(state == "successful" )%>%
+  head(1000)
+fail_kickstarter<-kickstarter %>%
+  filter(state == "failed" )%>%
+  head(1000)
+select_kickstarter=union(suc_kickstarter,fail_kickstarter)
+select_kickstarter_test <- sapply(select_kickstarter$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+select_kickstarter_test <- paste(unlist(select_kickstarter_test), collapse =" ")
+select_kickstarter_test<- Corpus(VectorSource(select_kickstarter_test))
+removeNumPunct <- function(x){gsub("[^[:alpha:][:space:]]*", "", x)}
+clean_corpus <- function(corpus){
+# corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, c(stopwords("en")))  
+    # We could add more stop words as above
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(removeNumPunct))
+  corpus <- tm_map(corpus, stripWhitespace)
+  return(corpus)
+}
+# Apply your customized function to the SOTU: sotu_clean
+select_kickstarter_clean <- clean_corpus(select_kickstarter_test)
+select_kickstarter_clean <- tm_map(select_kickstarter_clean, stemDocument)
+select_kickstarter_clean_dtm <- DocumentTermMatrix(select_kickstarter_clean) 
+select_kickstarter_clean_td<- tidy(select_kickstarter_clean_dtm)
+select_kickstarter_clean_td %>%     
+  group_by(term) %>%
+  summarise(n = sum(count)) %>%
+  top_n(n = 15, wt = n)  %>%
+  ungroup() %>%
+  mutate(term = reorder(term, n)) %>%
+ggplot(aes(term, n)) + 
+  geom_bar(stat = "identity",fill="slategrey") +
+  geom_text(aes(label=n, x=term, y=n), hjust = 0, color="slategrey") +
+  coord_flip() +
+  theme(axis.ticks.y=element_blank())+
+  ggtitle("Most frequent terms in the Kickstarter description")
+
+```
+```{r}
+#2a
+library(wordcloud)
+success <- kickstarter%>% 
+  mutate(ratio=pledged/(goal*100))%>%
+  arrange(desc(.$ratio)) %>%
+  head(1000)
+success_test <- sapply(success$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+success_test <- paste(unlist(success_test), collapse =" ")
+success_test<- Corpus(VectorSource(success_test))
+removeNumPunct <- function(x){gsub("[^[:alpha:][:space:]]*", "", x)}
+clean_corpus <- function(corpus){
+# corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, c(stopwords("en")))  
+    # We could add more stop words as above
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(removeNumPunct))
+  corpus <- tm_map(corpus, stripWhitespace)
+  return(corpus)
+}
+# Apply your customized function to the SOTU: sotu_clean
+success_test <- clean_corpus(success_test)
+success_test <- tm_map(success_test, stemDocument)
+success_test_dtm <- DocumentTermMatrix(success_test) 
+success_test_clean_td<- tidy(success_test_dtm)
+wordcloud(success_test_clean_td$term, success_test_clean_td$count,
+          max.words = 1000,min.words = 10,random.order = FALSE, rot.per=0, colors=brewer.pal(8, "Dark2"))
+```
+
+#### b) Success in words
+
+Provide a pyramid plot to show how the words between successful and unsuccessful projects differ in frequency. A selection of 10 - 20 top words is sufficient here.
+```{r}
+failed <- kickstarter%>% 
+  mutate(ratio=pledged/(goal*100))%>%
+  arrange(.$ratio) %>%
+  head(1000)
+failed_test <- sapply(failed$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+failed_test <- paste(unlist(failed_test), collapse =" ")
+failed_test<- Corpus(VectorSource(failed_test))
+removeNumPunct <- function(x){gsub("[^[:alpha:][:space:]]*", "", x)}
+clean_corpus <- function(corpus){
+  # corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, c(stopwords("en")))  
+  # We could add more stop words as above
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(removeNumPunct))
+  corpus <- tm_map(corpus, stripWhitespace)
+  return(corpus)
+}
+# Apply your customized function to the SOTU: sotu_clean
+failed_test <- clean_corpus(failed_test)
+failed_test <- tm_map(failed_test, stemDocument)
+failed_test_dtm <- DocumentTermMatrix(failed_test) 
+failed_test_clean_td<- tidy(failed_test_dtm)
+failed_test_clean_td<-failed_test_clean_td%>%
+  mutate (state=0)%>%
+  arrange(desc(.$count))%>%
+  head(100)
+names(failed_test_clean_td)[3]<-c("count0") 
+success_test_clean_td<-success_test_clean_td%>%
+  mutate (state=1)%>%
+  arrange(desc(.$count))%>%
+  head(100)
+names(success_test_clean_td)[3]<-c("count1") 
+test<-merge(failed_test_clean_td,success_test_clean_td,by="term")
+test<- test[,-c(2,5)]
+library(plotrix)
+p <- pyramid.plot(test$count0, test$count1, 
+                  labels = test$term, 
+                  gap = 50, 
+                  top.labels = c("Failed Projects", " ", "Successful Projects"), 
+                  main = "Words in Common", 
+                  laxlab = NULL, 
+                  raxlab = NULL, 
+                  unit = NULL, 
+                  labelcex=0.5)
+```
+I also put a comparison cloud for successful projects and failed projects.
+```{r}
+suc_kickstarter<-kickstarter %>%
+  filter(state == "successful" )%>%
+  head(1000)
+fail_kickstarter<-kickstarter %>%
+  filter(state == "failed" )%>%
+  head(1000)
+suc<-sapply(suc_kickstarter$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+fail<-sapply(fail_kickstarter$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+suc <- paste(unlist(suc), collapse =" ")
+fail<- paste(unlist(fail), collapse =" ")
+all<-c(suc,fail)
+all<-Corpus(VectorSource(all))
+removeNumPunct <- function(x){gsub("[^[:alpha:][:space:]]*", "", x)}
+clean_corpus <- function(corpus){
+  # corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, c(stopwords("en")))  
+  # We could add more stop words as above
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(removeNumPunct))
+  corpus <- tm_map(corpus, stripWhitespace)
+  return(corpus)
+}
+# Apply your customized function to the SOTU: sotu_clean
+all_clean <- clean_corpus(all)
+all_clean  <- tm_map(all_clean, stemDocument)
+all_tdm<- TermDocumentMatrix(all_clean)
+all_m<-as.matrix(all_tdm)
+colnames(all_m) = c("Successful", "Failed")
+comparison.cloud(all_m, random.order=FALSE, 
+                 colors = c("#00B2FF", "red", "#FF0099", "#6600CC"),
+                 title.size=1.5, max.words=100)
+
+
+```
+
+#### c) Simplicity as a virtue
+
+These blurbs are short in length (max. 150 characters) but let's see whether brevity and simplicity still matters. Calculate a readability measure (Flesh Reading Ease, Flesh Kincaid or any other comparable measure) for the texts. Visualize the relationship between the readability measure and one of the measures of success. Briefly comment on your finding.
+```{r}
+library(quanteda)
+require(dplyr)
+kickstarter_text <- sapply(kickstarter$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+kickstarter_text <- paste(unlist(kickstarter_text), collapse =" ")
+kickstarter_text<- corpus(kickstarter_text)
+success <- kickstarter%>% 
+  filter(state == "successful") 
+success_text <- sapply(success$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+success_text <- paste(unlist(success_text), collapse =" ")
+success_text<- corpus(success_text)
+failed <- kickstarter%>% 
+  filter(state == "failed") 
+failed_text <- sapply(failed$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+failed_text <- paste(unlist(failed_text), collapse =" ")
+failed_text<- corpus(failed_text)
+FRE_score<- textstat_readability(c(kickstarter_text,success_text,failed_text),measure=c('Flesch','Flesch.Kincaid','meanSentenceLength','meanWordSyllables'))
+library(tidyr)
+FRE_score<- gather(FRE_score,"document","n",2:5)
+FRE_score<- FRE_score%>%
+  mutate(group=1)
+FRE_score[,3]=c("1","2","3","1","2","3","1","2","3","1","2","3")
+ggplot(FRE_score, aes(x = document,y = n,fill =group))+
+  geom_bar(stat ="identity",width = 0.6,position = "dodge")+     
+  scale_fill_manual(values = c("black","red","grey"))+                 
+  labs(x = "Readability Measure",y = "Score", title = " The Relationship Between the Readability Measure")+                       
+  geom_text(aes(label = c("total","successful","fail","total","successful","fail","total","successful","fail","total","successful","fail")),position=position_dodge(width = 0.5),size = 2.5,vjust = -0.25,angle=30)+ 
+  theme(plot.title = element_text(size = 10,face = "bold", vjust = 0.5, hjust = 0.5),  
+        legend.title = element_blank(),                 
+        legend.text = element_text(size = 6),       
+        legend.position = 'right',
+        axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5)) 
+```
+From the Flesch Reading Ease, we could find the score is around 50, which is a college-level for readers. The FRE score of New York Times and Time Magazine are 48 and 50 seperately, which means the score of the kickstarter is some kind of same as New York Times. We could also learn from the table that the score of the successful text is a little higher than others, which means people would like to fund the projects with easy words.
+
+### 3. Sentiment
+
+Now, let's check whether the use of positive / negative words or specific emotions helps a project to be successful.
+
+#### a) Stay positive
+
+Calculate the tone of each text based on the positive and negative words that are being used. You can rely on the Hu & Liu dictionary provided in lecture or use the Bing dictionary contained in the tidytext package (tidytext::sentiments). Visualize the relationship between tone of the document and success. Briefly comment.
+```{r}
+pos <- read.table("positive-words.txt", as.is=T)
+neg <- read.table("negative-words.txt", as.is=T)
+
+sentiment_all <- function(words=c(kickstarter_text)){
+  tok <- quanteda::tokens(words)
+  pos.count <- sum(tok[[1]]%in%pos[,1])
+  neg.count <- sum(tok[[1]]%in%neg[,1])
+  out <- (pos.count - neg.count)/(pos.count+neg.count)
+  cat("\n Tone of Document:",out)
+}
+sentiment_all()
+sentiment_success <- function(words=c(success_text)){
+  tok <- quanteda::tokens(words)
+  pos.count <- sum(tok[[1]]%in%pos[,1])
+  neg.count <- sum(tok[[1]]%in%neg[,1])
+  out <- (pos.count - neg.count)/(pos.count+neg.count)
+  cat("\n Tone of Document:",out)
+}
+sentiment_success()
+tone<-c(0.4145936,0.3690533)
+tone<-data.frame(tone)
+tone<-tone%>%
+  mutate(group=1)
+tone[2,2]=0
+ggplot(tone, aes(x = group,y = tone))+
+  geom_bar(stat ="identity",width = 0.6)+     
+  scale_fill_manual(values = c("lightgrey"))+               
+  labs(x = "Document",y = "Tone of Document", title = "Tone of Document and Successful Project")+                        
+  geom_text(aes(label = c("total","successful")))
+theme(plot.title = element_text(size = 10,face = "bold", vjust = 0.5, hjust = 0.5),   
+      legend.title = element_blank(),                    
+      legend.text = element_text(size = 6),        
+      legend.position = 'right',
+      axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5)) 
+library(SentimentAnalysis)
+failed <- kickstarter%>% 
+  mutate(ratio=pledged/(goal*100))%>%
+  arrange(.$ratio) %>%
+  head(10000)
+kickstarter_ch<-failed$blurb
+kickstarter_ch<-as.character(kickstarter_ch)
+kickstarter_ch<-head(kickstarter_ch,10000)
+sentiment_fail <- analyzeSentiment(kickstarter_ch) 
+sentiment_fail<-mutate(sentiment_fail,id=1:10000)
+failed_select<-head(failed,10000)
+failed_select<-mutate(failed_select,id=1:10000)
+sentiment_fail<-merge(failed_select,sentiment_fail,by="id")
+success <- kickstarter%>% 
+  mutate(ratio=pledged/(goal*100))%>%
+  arrange(desc(.$ratio)) %>%
+  head(10000)
+kickstarter_ch<-success$blurb
+kickstarter_ch<-as.character(kickstarter_ch)
+kickstarter_ch<-head(kickstarter_ch,10000)
+sentiment_suc <- analyzeSentiment(kickstarter_ch) 
+sentiment_suc<-mutate(sentiment_suc,id=1:10000)
+success_select<-head(success,10000)
+success_select<-mutate(success_select,id=1:10000)
+sentiment_suc<-merge(success_select,sentiment_suc,by="id")
+
+p1<-ggplot(sentiment_fail, aes(x = id,y = SentimentQDAP))+
+  geom_bar(stat ="identity",width = 0.6)+     
+  scale_fill_manual(values = c("lightgrey"))+               
+  labs(x = "id",y = "Tone of Document", title = "Tone of Failed Projects")+                        
+  theme(plot.title = element_text(size = 10,face = "bold", vjust = 0.5, hjust = 0.5),   
+        legend.title = element_blank(),                    
+        legend.text = element_text(size = 6),        
+        legend.position = 'right')
+p2<-ggplot(sentiment_suc, aes(x = id,y = SentimentQDAP))+
+  geom_bar(stat ="identity",width = 0.6)+     
+  scale_fill_manual(values = c("lightgrey"))+               
+  labs(x = "id",y = "Tone of Document", title = "Tone of Successful Projects")+                        
+  theme(plot.title = element_text(size = 10,face = "bold", vjust = 0.5, hjust = 0.5),   
+        legend.title = element_blank(),                    
+        legend.text = element_text(size = 6),        
+        legend.position = 'right')
+library(Rmisc)
+library(plyr)
+multiplot(p1, p2)
+```
+####
+
+I used Hu&Liu Dictionary in this task. The tone of the whole document is  0.4145936, and the tone of the successful project document is 0.3690533. From the two number we could learn that both of the documents are mainly positive. Comparatively, tone of the whole document is higher than tone of successful projects, meaning the tone of the whole documents are more positive.
+#### b) Positive vs negative
+
+Segregate all 2,000 blurbs into positive and negative texts based on their polarity score calculated in step (a). Now, collapse the positive and negative texts into two larger documents. Create a document-term-matrix based on this collapsed set of two documents. Generate a comparison cloud showing the most-frequent positive and negative words.
+```{r}
+sentiment_fail<-sentiment_fail%>%
+  arrange(.$SentimentQDAP) %>%
+  head(1000)
+sentiment_suc<-sentiment_suc%>%
+  arrange(desc(.$SentimentQDAP)) %>%
+  head(1000)
+sentiment_fail <- sapply(sentiment_fail$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+sentiment_fail <- paste(unlist(sentiment_fail), collapse =" ")
+sentiment_fail<- Corpus(VectorSource(sentiment_fail))
+removeNumPunct <- function(x){gsub("[^[:alpha:][:space:]]*", "", x)}
+clean_corpus <- function(corpus){
+  # corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, c(stopwords("en")))  
+  # We could add more stop words as above
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(removeNumPunct))
+  corpus <- tm_map(corpus, stripWhitespace)
+  return(corpus)
+}
+# Apply your customized function to the SOTU: sotu_clean
+sentiment_fail <- clean_corpus(sentiment_fail)
+sentiment_fail <- tm_map(sentiment_fail, stemDocument)
+sentiment_fail_dtm <- DocumentTermMatrix(sentiment_fail) 
+sentiment_fail_clean_td<- tidy(sentiment_fail_dtm)
+library(wordcloud)
+wordcloud(sentiment_fail_clean_td$term, sentiment_fail_clean_td$count,
+          max.words = 20,min.words = 10,random.order = FALSE, rot.per=0, colors=brewer.pal(8, "Dark2"))
+sentiment_suc <- sapply(sentiment_suc$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+sentiment_suc <- paste(unlist(sentiment_suc), collapse =" ")
+sentiment_suc<- Corpus(VectorSource(sentiment_suc))
+removeNumPunct <- function(x){gsub("[^[:alpha:][:space:]]*", "", x)}
+clean_corpus <- function(corpus){
+  # corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, c(stopwords("en")))  
+  # We could add more stop words as above
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(removeNumPunct))
+  corpus <- tm_map(corpus, stripWhitespace)
+  return(corpus)
+}
+# Apply your customized function to the SOTU: sotu_clean
+sentiment_suc <- clean_corpus(sentiment_suc)
+sentiment_suc <- tm_map(sentiment_suc, stemDocument)
+sentiment_suc_dtm <- DocumentTermMatrix(sentiment_suc) 
+sentiment_suc_clean_td<- tidy(sentiment_suc_dtm)
+library(wordcloud)
+wordcloud(sentiment_suc_clean_td$term, sentiment_suc_clean_td$count,
+          max.words = 20,min.words = 10,random.order = FALSE, rot.per=0, colors=brewer.pal(8, "Dark2"))
+```
+I also generate a comparison cloud.
+```{r}
+failed <- kickstarter%>% 
+  mutate(ratio=pledged/(goal*100))%>%
+  arrange(.$ratio) %>%
+  head(10000)
+kickstarter_ch<-failed$blurb
+kickstarter_ch<-as.character(kickstarter_ch)
+kickstarter_ch<-head(kickstarter_ch,10000)
+sentiment_fail <- analyzeSentiment(kickstarter_ch) 
+sentiment_fail<-mutate(sentiment_fail,id=1:10000)
+failed_select<-head(failed,10000)
+failed_select<-mutate(failed_select,id=1:10000)
+sentiment_fail<-merge(failed_select,sentiment_fail,by="id")
+success <- kickstarter%>% 
+  mutate(ratio=pledged/(goal*100))%>%
+  arrange(desc(.$ratio)) %>%
+  head(10000)
+kickstarter_ch<-success$blurb
+kickstarter_ch<-as.character(kickstarter_ch)
+kickstarter_ch<-head(kickstarter_ch,10000)
+sentiment_suc <- analyzeSentiment(kickstarter_ch) 
+sentiment_suc<-mutate(sentiment_suc,id=1:10000)
+success_select<-head(success,10000)
+success_select<-mutate(success_select,id=1:10000)
+sentiment_suc<-merge(success_select,sentiment_suc,by="id")
+
+
+sentiment_fail<-sentiment_fail%>%
+  arrange(.$SentimentQDAP) %>%
+  head(1000)
+sentiment_suc<-sentiment_suc%>%
+  arrange(desc(.$SentimentQDAP)) %>%
+  head(1000)
+sentiment_fail <- sapply(sentiment_fail$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+sentiment_fail <- paste(unlist(sentiment_fail), collapse =" ")
+sentiment_suc <- sapply(sentiment_suc$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+sentiment_suc <- paste(unlist(sentiment_suc), collapse =" ")
+sentiment_all<-c(sentiment_suc,sentiment_fail)
+sentiment_all<- Corpus(VectorSource(sentiment_all))
+removeNumPunct <- function(x){gsub("[^[:alpha:][:space:]]*", "", x)}
+clean_corpus <- function(corpus){
+  # corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, c(stopwords("en")))  
+  # We could add more stop words as above
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(removeNumPunct))
+  corpus <- tm_map(corpus, stripWhitespace)
+  return(corpus)
+}
+# Apply your customized function to the SOTU: sotu_clean
+sentiment_all <- clean_corpus(sentiment_all)
+sentiment_all <- tm_map(sentiment_all, stemDocument)
+sentiment_all_tdm <- TermDocumentMatrix(sentiment_all) 
+sentiment_all_m<-as.matrix(sentiment_all_tdm)
+colnames(sentiment_all_m) = c("Successful", "Failed")
+comparison.cloud(sentiment_all_m, random.order=FALSE, 
+                 colors = c("darkgreen", "darkred"),
+                 title.size=2.5, max.words=100)
+
+```
+
+#### c) Get in their mind
+
+Now, use the NRC Word-Emotion Association Lexicon in the tidytext package to identify a larger set of emotions (anger, anticipation, disgust, fear, joy, sadness, surprise, trust). Again, visualize the relationship between the use of words from these categories and success. What is your finding?
+```{r}
+library(syuzhet)
+library(plotly)
+library(tm)
+suc_kickstarter<-kickstarter %>%
+  filter(state == "successful" )%>%
+  head(1000)
+fail_kickstarter<-kickstarter %>%
+  filter(state == "failed" )%>%
+  head(1000)
+select_kickstarter=union(suc_kickstarter,fail_kickstarter)
+select_kickstarter_test <- sapply(select_kickstarter$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+select_kickstarter_test <- paste(unlist(success_test), collapse =" ")
+select_kickstarter_test= gsub('(RT|via)((?:\\b\\W*@\\w+)+)', '', select_kickstarter_test)
+select_kickstarter_test= gsub('@\\w+', '', select_kickstarter_test)
+select_kickstarter_test = gsub('[[:punct:]]', '', select_kickstarter_test)
+# remove numbers
+select_kickstarter_test = gsub('http\\w+', '', select_kickstarter_test)
+# remove unnecessary spaces
+select_kickstarter_test= gsub('[ \t]{2,}', '', select_kickstarter_test)
+select_kickstarter_test = gsub('^\\s+|\\s+$', '', select_kickstarter_test)
+# remove emojis or special characters
+select_kickstarter_test = gsub('<.*>', '', enc2native(select_kickstarter_test))
+select_kickstarter_test = tolower(select_kickstarter_test)
+select_kickstarter_test <- select_kickstarter_test[!duplicated(select_kickstarter_test)]
+emotions <- get_nrc_sentiment(select_kickstarter_test)
+emo_bar = colSums(emotions)
+emo_sum = data.frame(count=emo_bar, emotion=names(emo_bar))
+emo_sum$emotion = factor(emo_sum$emotion, levels=emo_sum$emotion[order(emo_sum$count, decreasing = TRUE)])
+plot_ly(emo_sum, x=~emotion, y=~count, type="bar", color=~emotion) %>%
+  layout(xaxis=list(title=""), showlegend=FALSE,
+         title="Distribution of emotion categories for all projects")
+```
+
+```{r}
+suc_kickstarter<-kickstarter %>%
+  filter(state == "successful" )%>%
+  head(1000)
+success_test <- sapply(suc_kickstarter$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+success_test <- paste(unlist(success_test), collapse =" ")
+success_test<- Corpus(VectorSource(success_test))
+removeNumPunct <- function(x){gsub("[^[:alpha:][:space:]]*", "", x)}
+clean_corpus <- function(corpus){
+          # corpus <- tm_map(corpus, removePunctuation)
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removeWords, c(stopwords("en")))  
+          # We could add more stop words as above
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, content_transformer(removeNumPunct))
+corpus <- tm_map(corpus, stripWhitespace)
+return(corpus)
+}
+        # Apply your customized function to the SOTU: sotu_clean
+success_test <- clean_corpus(success_test)
+success_test <- tm_map(success_test, stemDocument)
+success_test_dtm <- DocumentTermMatrix(success_test) 
+success_test_clean_td<- tidy(success_test_dtm)
+colnames(success_test_clean_td)[2] <- "word"
+success_sentiment<-get_sentiments("nrc") 
+success_sentiment<-merge(success_test_clean_td,success_sentiment,by="word")
+
+        success_sentiment %>%
+          ungroup %>%
+          arrange(desc(count)) %>% 
+          group_by(sentiment) %>% # 
+          mutate(top = seq_along(word)) %>%
+          # retain top 15 frequent words
+          filter(top <= 15) %>%
+          # create barplot
+          ggplot(aes(x = -top, y = count, fill = sentiment)) +
+          geom_col(color = "black") +
+          geom_text(aes(label = word), hjust = "left", nudge_y = 6) +
+          labs(title = "Most frequent words in Successful Projects",
+               x = NULL,
+               y = "Word count") +
+          facet_wrap( ~ sentiment, ncol = 5) +
+          coord_flip() +
+          theme(legend.position = "none",
+                # rotate x text
+                axis.text.x = element_text(angle = 45, hjust = 1,size=3),
+                # remove tick marks and text on y-axis
+                axis.ticks.y = element_blank(),
+                axis.text.y = element_blank())
+
+suc_kickstarter<-kickstarter %>%
+  filter(state == "successful" )%>%
+  head(1000)
+fail_kickstarter<-kickstarter %>%
+  filter(state == "failed" )%>%
+  head(1000)
+select_kickstarter=union(suc_kickstarter,fail_kickstarter)
+select_kickstarter_test <- sapply(select_kickstarter$blurb, function(row) iconv(row, "latin1", "ASCII", sub=""))
+select_kickstarter_test <- paste(unlist(select_kickstarter_test), collapse =" ")
+select_kickstarter_test<- Corpus(VectorSource(select_kickstarter_test))
+removeNumPunct <- function(x){gsub("[^[:alpha:][:space:]]*", "", x)}
+clean_corpus <- function(corpus){
+# corpus <- tm_map(corpus, removePunctuation)
+  corpus <- tm_map(corpus, content_transformer(tolower))
+  corpus <- tm_map(corpus, removeWords, c(stopwords("en")))  
+    # We could add more stop words as above
+  corpus <- tm_map(corpus, removeNumbers)
+  corpus <- tm_map(corpus, content_transformer(removeNumPunct))
+  corpus <- tm_map(corpus, stripWhitespace)
+  return(corpus)
+}
+# Apply your customized function to the SOTU: sotu_clean
+select_kickstarter_clean <- clean_corpus(select_kickstarter_test)
+select_kickstarter_clean <- tm_map(select_kickstarter_clean, stemDocument)
+select_kickstarter_clean_dtm <- DocumentTermMatrix(select_kickstarter_clean) 
+select_kickstarter_clean_td<- tidy(select_kickstarter_clean_dtm)
+        colnames(select_kickstarter_clean_td)[2] <- "word"
+        all_sentiment<-get_sentiments("nrc") 
+        all_sentiment<-merge(select_kickstarter_clean_td,all_sentiment,by="word")
+
+        all_sentiment %>%
+          ungroup %>%
+          arrange(desc(count)) %>% 
+          group_by(sentiment) %>% # 
+          mutate(top = seq_along(word)) %>%
+          # retain top 15 frequent words
+          filter(top <= 15) %>%
+          # create barplot
+          ggplot(aes(x = -top, y = count, fill = sentiment)) +
+          geom_col(color = "black") +
+          geom_text(aes(label = word), hjust = "left", nudge_y = 6,size=3) +
+          labs(title = "Most frequent words in All Projects",
+               x = NULL,
+               y = "Word count") +
+          facet_wrap( ~ sentiment,ncol=5) +
+          coord_flip() +
+          theme(legend.position = "none",
+                # rotate x text
+                axis.text.x = element_text(angle = 45),
+                # remove tick marks and text on y-axis
+                axis.ticks.y = element_blank(),
+                axis.text.y = element_blank())
+```
+###
+
+
+From the image above we could find that the words in successful projects seem to have much more words in the emotion of anticipation, joy, trust and positive. We could find the proportion of the word "arts" has a greatly increase between all projects and successful projects. This means positive and anticipation words tend to have much more successful projects in kickstarter.
