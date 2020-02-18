@@ -1,4 +1,4 @@
-# Data Visualization
+# Data Visualization Projects
 
 Created and completed by Tianyi Hu
 
