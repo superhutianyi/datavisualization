@@ -2,8 +2,6 @@
 
 Created and completed by Tianyi Hu
 
-Some work regarding to data visualization
-
 ## Assignment 1: Using ggplot2 for Visualization: Summer Olympics Medals over Timeata visualizations in which you outline the main patterns around which to base the story.
 
 (1) Medal Counts over Time
