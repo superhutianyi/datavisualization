@@ -1,0 +1,390 @@
+---
+title: "QMSS: DataVisaulization_HW2"
+course: "QMSS-G5063-2019 Data Vizualization"
+author: Tianyi Hu
+date: 2019-03-25
+output: html_document
+---
+
+```{r Setup, include=FALSE, results='hide', warning=FALSE}
+library(knitr)
+opts_chunk$set(fig.path="figures/",
+               cache.path="cache/",
+               cache=FALSE,
+               echo=TRUE,
+               message=FALSE,
+               warning=FALSE)  
+```
+
+### Task 1. Data exploration
+
+Before focusing on the spatial part of the data, let's explore the basic patterns in the data.
+
+#### a) Violation Code and Fine Amounts
+
+Add the violation code descriptions and fine amounts to the data file. Provide a visual overview of the top 10 most common types of violations (feel free to group them into categories if reasonable). Compare how this ranking differs if we focus on the total amount of revenue generated.
+```{r}
+#1a
+library(readxl)
+require(dplyr)
+options(scipen = 200)
+parkingNYC<-read.csv("parkingNYC_Jan2019.csv")
+violation<-read_excel("parkingNYC_ParkingViolationCodes_Nov_2018.xlsx")
+names(violation)[1]<-c("Violation.Code") 
+parkingNYC_violation=merge(parkingNYC,violation, by = "Violation.Code")
+#count the number of each violation
+violation_count <- parkingNYC_violation %>% 
+  mutate(number=1) %>%
+  group_by(Violation.Code) %>%
+  summarize(Times = length(number)) %>%
+  arrange(desc(.$Times)) 
+
+violation_type=merge(violation_count,violation, by = "Violation.Code")
+violation_type=arrange(violation_type, desc(Times))
+violation_type=head(violation_type, 10)
+violation_type<- violation_type[,-c(4,5)]
+names(violation_type)[3]<-c("Description") 
+
+#add up the total fine amount of each violation
+names(parkingNYC_violation)[49]<-c("Fine_below96th") 
+names(parkingNYC_violation)[50]<-c("Fine_otherareas") 
+
+fine_total=merge(violation,violation_count, by = "Violation.Code")
+names(fine_total)[3]<-c("Fine_below96th") 
+names(fine_total)[4]<-c("Fine_otherareas") 
+fine_total=mutate(fine_total,Fine_below96th_total=Fine_below96th * Times)
+fine_total=mutate(fine_total,Fine_otherareas_total=Fine_otherareas * Times)
+fine_total_1=arrange(fine_total,desc(Fine_below96th_total)) 
+fine_total_below96th=head(fine_total_1, 10)
+fine_total_below96th<- fine_total_below96th[,-c(3,4,5,7)]
+fine_total_2=arrange(fine_total,desc(Fine_otherareas_total)) 
+fine_total_otherareas=head(fine_total_2, 10)
+fine_total_otherareas<- fine_total_otherareas[,-c(3,4,5,6)]
+names(fine_total_below96th)[2]<-c("Description") 
+names(fine_total_otherareas)[2]<-c("Description") 
+
+#make bar chart
+#install packages("ggplot2")
+library(ggplot2)
+#install.packages("plotly")
+library("plotly")
+#install.packages("ggthemes")
+library(ggthemes)
+#install.packages("hchart")
+
+ggplot(violation_type, aes(x =reorder((Description),-Times), y = Times)) +
+       geom_bar(stat = "identity",fill="ivory3") +
+       geom_text(aes(label = Times), vjust = 1.5, colour = "black", position = position_dodge(.9), size = 3) +
+       labs(x="Violation Description",y="Number of Violation Occurrence",title = "Top 10 Most Common Violations") +
+       theme(panel.grid = element_blank(),panel.background = element_blank(),axis.text.y = element_blank() ) +
+       theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),axis.text.x = element_text(size = 7,angle = 30,hjust = 1))
+       
+ggplot(fine_total_below96th,aes(x =reorder((Violation.Code),-Fine_below96th_total), y = Fine_below96th_total)) +
+  geom_bar(stat = "identity",aes(fill=reorder((Description), -Fine_below96th_total))) +
+  labs(x="Violation Description",y="Total Amount of Revenue Generated ($)",title = "Top 10 Violations that Made Most Total Amount of Revenue (Manhattan Below 96th Street)") +
+  theme(panel.grid = element_blank(),panel.background = element_blank()) +
+  scale_fill_manual(values=c("#EF0707","#e84717","#e84e16","#e86615","#e87e14","#e89a13","#e8af12","#e8c711","#e8e011","#cbe811")) +
+  theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),axis.text.x = element_text(size = 7,angle = 30,hjust = 1))          
+       
+ggplot(fine_total_otherareas,aes(x =reorder((Violation.Code),-Fine_otherareas_total), y = Fine_otherareas_total)) +
+  geom_bar(stat = "identity",aes(fill=reorder((Description), -Fine_otherareas_total))) +
+  labs(x="Violation Description",y="Total Amount of Revenue Generated ($)",title = "Top 10 Violations that Made Most Total Amount of Revenue (Other Areas)") +
+  theme(panel.grid = element_blank(),panel.background = element_blank()) +
+  scale_fill_manual(values=c("#EF0707","#e84717","#e84e16","#e86615","#e87e14","#e89a13","#e8af12","#e8c711","#e8e011","#cbe811")) +
+  theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),axis.text.x = element_text(size = 7,angle = 30,hjust = 1))       
+```
+
+#### b) Average amount of fine by vehicle
+
+Compare the average amount of fine by vehicle color, vehicle year, and vehicle plate type [Hint: it is sufficient to restrict your attention to commercial (COM) and passenger (PAS) vehicles]? Briefly describe your findings.
+
+```{r}
+#1b
+violation_vehicle=parkingNYC_violation[,-c(2:4,6:33,35,37:48,50)]
+violation_vehicle<-na.omit(violation_vehicle)
+names(violation_vehicle)[2]<-c("PlateType")
+names(violation_vehicle)[3]<-c("VehicleColor") 
+names(violation_vehicle)[4]<-c("VehicleYear")
+
+violation_vehicle<- violation_vehicle%>% 
+  filter(PlateType == "PAS" | PlateType == "COM")
+
+
+violation_vehicle_color<-violation_vehicle%>% 
+  mutate(number=1) %>%
+  group_by(VehicleColor) %>%
+  summarise(AverageFine=(sum(Fine_below96th)/length(number))  )  
+violation_vehicle_color=arrange(violation_vehicle_color,desc(AverageFine))
+
+
+violation_vehicle_platetype<-violation_vehicle%>% 
+  mutate(number=1) %>%
+  group_by(PlateType) %>%
+  summarise(AverageFine=(sum(Fine_below96th)/length(number))  ) 
+
+violation_vehicle_year<-violation_vehicle%>% 
+  mutate(number=1) %>%
+  group_by(VehicleYear) %>%
+  summarise(AverageFine=(sum(Fine_below96th)/length(number))  )
+violation_vehicle_year<- violation_vehicle_year%>% 
+  filter(VehicleYear != "0" )
+violation_vehicle_year=arrange(violation_vehicle_year,desc(AverageFine))
+
+
+ggplot(violation_vehicle_color, aes(x =reorder((VehicleColor),-AverageFine), y = AverageFine)) +
+  geom_bar(stat = "identity",fill="ivory3") +
+  coord_flip()+
+  labs(x="Vehicle Color",y="Average Fine Amount ($)",title = "Average Amount of Fine Based on Vehicle Color") +
+  theme(panel.grid = element_blank(),panel.background = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),axis.text.x = element_text(size = 7,angle = 30,hjust = 1))  
+
+ggplot(violation_vehicle_platetype, aes(x =reorder((PlateType),-AverageFine), y = AverageFine)) +
+  geom_bar(stat = "identity",fill="ivory3") +
+  labs(x="Plate Type",y="Average Fine Amount ($)",title = "Average Amount of Fine Based on Vehicle Plate Type") +
+  theme(panel.grid = element_blank(),panel.background = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),axis.text.x = element_text(size = 7,angle = 30,hjust = 1))       
+
+ggplot(violation_vehicle_year, aes(x =reorder((VehicleYear),-AverageFine), y = AverageFine)) +
+  geom_bar(stat = "identity",fill="ivory3") +
+  coord_flip()+
+  labs(x="Vehicle Year",y="Average Fine Amount ($)",title = "Average Amount of Fine Based on Vehicle Year") +
+  theme(panel.grid = element_blank(),panel.background = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),axis.text.x = element_text(size = 7,angle = 30,hjust = 1)) 
+
+```
+For the vehicle color, most people having fine have brown and black car. For the vehicle plate type, I just focus on the commercial type and passenger type. I find that the amount of fine based on vehicle plate would be almost the same, but the amount of fine of commercial type will be much higher than passenger type. 1990 was the most year that having fine amount.
+
+### Task 2. Map by Precincts
+
+Read in the shape files for the police precincts and remove all precincts outside of Manhattan.
+
+#### a) Number of tickets, total fines, and average fines
+
+Provide three maps that show choropleth maps of:
+
+the total number of tickets
+the total amount of fines
+the average amount of fines
+
+Briefly describe what you learn from these maps in comparison.
+
+```{r}
+#2a
+names(parkingNYC_violation)[15]<-c('ViolationPrecinct')
+ticket_count <- parkingNYC_violation %>% 
+  mutate(number=1) %>%
+  group_by(ViolationPrecinct) %>%
+  summarize(Times = length(number)) %>%
+  arrange((.$ViolationPrecinct)) 
+
+fine_total <- parkingNYC_violation%>% 
+  filter(ViolationPrecinct <= 32) %>%
+  mutate(Fine=Fine_below96th)
+fine_total_2 <- parkingNYC_violation%>% 
+  filter(ViolationPrecinct >32) %>%
+  mutate(Fine=Fine_otherareas)
+fine_total_1 <- fine_total%>% 
+  mutate(number=1) %>%
+  group_by(ViolationPrecinct) %>%
+  summarise(AverageFine=(sum(Fine)/length(number))  )
+fine_total <- fine_total%>% 
+  mutate(number=1) %>%
+  group_by(ViolationPrecinct) %>%
+  summarise(TotalFine=sum(Fine))  
+fine_total=mutate(fine_total,id=1:23)
+fine_total_1=mutate(fine_total_1,id=1:23)
+ticket_count=mutate(ticket_count,id=1:43)
+
+#install.packages("maptools")
+library(maptools)
+#install.packages("rgdal")
+library(rgdal)  
+nyc_pp <- readOGR("nypp_19a/.","nypp")
+# Let's keep only Manhattan
+nyc_pp <- subset(nyc_pp, Precinct<=32)
+#install.packages("tmap")
+library(tmap)
+
+nyc_pp <- spTransform(nyc_pp, CRS("+proj=longlat +datum=WGS84"))
+nyc_pp <- fortify(nyc_pp)
+map_nyc_pp=merge(nyc_pp,fine_total_1, by = "id")
+map_nyc_pp_2=merge(nyc_pp,fine_total, by = "id")
+map_ticket_count=merge(nyc_pp,ticket_count, by = "id")
+
+names(map_nyc_pp_2)[c(2,3)] = c("x", "y")
+names(map_nyc_pp)[c(2,3)] = c("x", "y")
+names(map_ticket_count)[c(2,3)] = c("x", "y")
+
+ggplot(map_ticket_count) + geom_map(aes(map_id = id, fill = Times), map = map_ticket_count) +
+  expand_limits(map_ticket_count) +
+  scale_fill_gradient(high = "black", low = "light blue") +
+  labs(x='Longitude',y='Latitude',title='The Total Number of Violation Tickets in Manhattan')+
+  theme(panel.grid = element_blank(),panel.background = element_blank(), axis.text.y = element_blank(),axis.text.x = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),plot.margin=unit(rep(2,4),'lines')  )
+
+ggplot(fine_total) + geom_map(aes(map_id = id, fill = TotalFine), map = map_nyc_pp_2) +
+  expand_limits(map_nyc_pp_2) +
+  scale_fill_gradient(high = "black", low = "light blue") +
+  labs(x='Longitude',y='Latitude',title='The Total Number of Violation Fine in Manhattan')+
+  theme(panel.grid = element_blank(),panel.background = element_blank(), axis.text.y = element_blank(),axis.text.x = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),plot.margin=unit(rep(2,4),'lines')  )
+
+ggplot(fine_total_1) + geom_map(aes(map_id = id, fill = AverageFine), map = map_nyc_pp) +
+  expand_limits(map_nyc_pp) +
+  scale_fill_gradient(high = "black", low = "light blue") +
+  labs(x='Longitude',y='Latitude',title='The Average Amount of Fines in Manhattan')+
+  theme(panel.grid = element_blank(),panel.background = element_blank(), axis.text.y = element_blank(),axis.text.x = element_blank()) +
+  theme(plot.title = element_text(hjust = 0.5),title=element_text(size=13, face= "bold", vjust=0.5, hjust=0.5),plot.margin=unit(rep(2,4),'lines')  )
+```
+From the picture above, I could learn that the most number of violation tickets, the most total amount of fines, and the average amount of fines will be besides the Central Park.
+
+#### b) Types of violations
+
+Group the almost 100 types of ticket violations into a smaller set of 4-6 subgroups (where other should be the remainder of violations not included in other groups you defined). [Hint: No need to spend more than 5 minutes thinking about what the right grouping is.]. Provide choropleth maps for each of these subgroups to show where different types of violations are more or less common.
+```{r}
+#2b
+names(violation)[3]<-c('Fine')
+violation_group <- violation %>% mutate(
+  Group = case_when(Violation.Code <15 ~"1",Violation.Code >=15 & Violation.Code<=22 ~ "2",Violation.Code>23&Violation.Code<=45~ "3",Violation.Code>45&Violation.Code<=65~ "4",Violation.Code>65&Violation.Code<=70~ "5",Violation.Code>70&Violation.Code<100~ "6"))
+violation_count <- parkingNYC_violation %>% 
+  mutate(number=1) %>%
+  group_by(Violation.Code) %>%
+  summarize(Times = length(number)) %>%
+  arrange(desc(.$Times))
+names(violation_count)[1]<-c('VIOLATION CODE')
+names(violation_group)[1]<-c('VIOLATION CODE')
+names(parkingNYC_violation)[1]<-c('VIOLATION CODE')
+violation_group=merge(violation_group,violation_count, by='VIOLATION CODE')
+violation_group=mutate(violation_group, TotalFine=Fine*Times)
+violation_group_test=merge(violation_group,parkingNYC_violation, by='VIOLATION CODE')
+violation_group_test<-violation_group_test[,-c(3:4,6,8:20,22:56)]
+violation_group_test_count<- violation_group_test %>% 
+  group_by(ViolationPrecinct,Group) %>%
+  summarize(TotalFine=sum(TotalFine)) 
+violation_group_test_count_2 <- violation_group_test_count%>% 
+  filter(ViolationPrecinct <29) %>%
+  group_by(ViolationPrecinct,Group) %>%
+  mutate(TotalFine=max(TotalFine))%>%
+  ungroup()
+violation_group_test_count_2 <- violation_group_test_count_2 %>% 
+  group_by(ViolationPrecinct) %>%
+  filter(TotalFine==max(TotalFine)) %>%
+  ungroup()
+nyc_pp <- readOGR("nypp_19a/.","nypp")
+nyc_pp <- subset(nyc_pp, Precinct<=32)
+nyc_pp@data$group=violation_group_test_count_2$Group
+library("ggmap")
+tm_shape(nyc_pp)+tm_fill("group",title="Violation in Group in Manhattan")+
+  tm_compass(position = c(.65, .15), color.light = "grey90")
+```
+### Task 3. Focus on the Upper East
+
+Precinct 19 identifies the Upper East Side. The data currently does not provide latitude and longitude of the violation locations (and I am not sure what these street_code variables are for).
+
+#### a) Ignoring fire hydrants
+
+Restrict your data to parking violations related to fire hydrants (Violation Code = 40). Using the variables Street Name and House Number as well as the knowledge that these addresses are in the Upper East Side of Manhattan, geocode at least 500 addresses. Include a data table of these addresses and the latitude and longitude of these addresses in the output.
+
+```{r}
+#3a
+library("tidyr")
+Upeast_data <- parkingNYC%>% 
+  filter(Violation.Code == "40" & Violation.Precinct == "19")%>%
+  arrange((.$Street.Name))%>%
+  unite(address,House.Number,Street.Name)%>%
+  head(600)
+{for(i in 1:nrow(Upeast_data))
+{
+  # Print("Working...")
+  result <- geocode(Upeast_data$address[i], output = "latlona", source = "google")
+  Upeast_data$lon[i] <- as.numeric(result[1])
+  Upeast_data$lat[i] <- as.numeric(result[2])
+}
+  }
+Upeast_data_test<-Upeast_data[,-c(1:46)]
+Upeast_data_test<-na.omit(Upeast_data_test)
+names(Upeast_data_test)[1]<-c("Longitude") 
+names(Upeast_data_test)[2]<-c("Latitude") 
+names(Upeast_data)[47]<-c("Longitude") 
+names(Upeast_data)[48]<-c("Latitude") 
+
+
+{for(i in 1:nrow(Upeast_data_test))
+{
+  result <- revgeocode(c(Upeast_data_test$Longitude[i], Upeast_data_test$Latitude[i]), output="address")
+  Upeast_data_test$address[i] <- as.character(result[1])
+}
+}
+library(DT)
+datatable(Upeast_data_test)
+
+
+```
+#### b) Interactive map
+
+Provide an interactive map of the violations you geocoded using leaflet. Provide at least three pieces of information on the parking ticket in a popup.
+```{r}
+#3b
+Upeast_data=merge(Upeast_data_test,Upeast_data, by = c("Longitude","Latitude"))
+Upeast_data<-unique(Upeast_data)
+Upeast_data_test_2<-Upeast_data[,-c(14:49)]
+Upeast_data_test_2=merge(Upeast_data_test_2,parkingNYC_violation, by = "Summons.Number")
+library(devtools)
+library(leaflet)
+content <- paste("Plate ID:",Upeast_data_test_2$Plate.ID,"<br/>",
+                 "Violation Code:",Upeast_data_test_2$`VIOLATION CODE`,"<br/>",
+                 "Issue Date:",Upeast_data_test_2$Issue.Date,"<br/>")
+leaflet(Upeast_data_test_2) %>%
+  addTiles() %>%   
+  addCircles(popup = content)%>%
+  setView(-73.96, 40.77, zoom = 14)
+
+```
+#### c)
+
+Using the vehicle Plate ID, identify repeat offenders (in the full dataset). Create another variable called luxury_car in which you identify luxury car brands using the Vehicle Make variable.
+
+Start with the previous map. Distinguish the points by whether the car is a repeat offender and/or luxury car. Add a legend informing the user about the color scheme. Also make sure that the added information about the car type and repeat offender status is now contained in the popup information. Show this map.
+```{r}
+#3c
+repeat_violation<-parkingNYC_violation %>% 
+  group_by(Plate.ID) %>%  
+  mutate(index = n()) %>%
+  filter(index > 1) %>%
+  ungroup()
+repeat_violation_test<- repeat_violation%>% 
+  mutate(luxury_car = case_when(Vehicle.Make == "LEXUS" | Vehicle.Make == "TESLA"| Vehicle.Make == "LINCO" | Vehicle.Make == "BMW"~ 1,TRUE ~ 0))
+repeat_violation_test_2<-merge(repeat_violation_test,Upeast_data_test_2,by="Summons.Number")
+repeat_violation_test_2<-repeat_violation_test_2[,-c(4:5,7,9:33,35:51,56:114)]
+repeat_violation_test_2<-repeat_violation_test_2[-c(73,221),]
+library(devtools)
+library(leaflet)
+popup = paste("Plate ID:",repeat_violation_test_2$Plate.ID,"<br/>",
+              "Issue Date:",repeat_violation_test_2$Issue.Date,"<br/>",
+              "Vehicle Make:",repeat_violation_test_2$Vehicle.Make,"<br/>",
+              "Vehicle Color:",repeat_violation_test_2$Vehicle.Color.x,"<br/>")
+library(RColorBrewer)
+pal = colorFactor("Set1", domain = repeat_violation_test_2$luxury_car)
+color_Vehicle = pal(repeat_violation_test_2$luxury_car)
+leaflet(Upeast_data_test_2) %>%
+  addTiles() %>%   
+  addCircles(popup = popup,color=color_Vehicle)%>%
+  setView(-73.96, 40.77, zoom = 15)%>%
+  addLegend(pal=pal, value=~repeat_violation_test_2$luxury_car,title="Luxury Cars")
+```
+From the map, the dark red point is the full dataset, the light red point is the repeated vehicles, and green point is both the repeated vehicles and luxury cars.
+
+#### d) Cluster
+
+Add marker clustering, so that zooming in will reveal the individual locations but the zoomed out map only shows the clusters. Show the map with clusters.
+```{r}
+#3d
+leaflet(Upeast_data_test_2) %>%
+  addTiles() %>%   
+  setView(-73.96, 40.77, zoom = 14)%>%
+  addLegend(pal=pal, value=~repeat_violation_test_2$luxury_car,title="Luxury Cars")%>%
+  addMarkers(clusterOptions = markerClusterOptions(),popup=popup)
+```
+
+
+
