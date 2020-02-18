@@ -2,7 +2,7 @@
 
 Created and completed by Tianyi Hu
 
-## Assignment 1: Using ggplot2 for Visualization: Summer Olympics Medals over Timeata visualizations in which you outline the main patterns around which to base the story.
+## Assignment 1: Using ggplot2 for Visualization: Summer Olympics Medals over Time
 
 (1) Medal Counts over Time
 
