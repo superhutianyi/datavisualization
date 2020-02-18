@@ -38,3 +38,13 @@ I will put some visualization here. But if you are interested, check out in the 
 
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Manhattan%20Violation/map.png)
 ![image](https://github.com/superhutianyi/datavisualization/blob/master/Manhattan%20Violation/interactivemap1.png)
+
+## Assignment 3: Text Mining Kickstarter Projects
+(1) Word Cloud
+(2) Sentiment Analysis
+
+### Results:
+I will put some visualization here. But if you are interested, check out in the folder named "Text Mining".
+
+![image](https://github.com/superhutianyi/datavisualization/blob/master/Text%20Mining/Wordcloud.png)
+![image](https://github.com/superhutianyi/datavisualization/blob/master/Text%20Mining/SentimentAnalysis.png)
