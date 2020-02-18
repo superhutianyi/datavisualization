@@ -1,0 +1,380 @@
+---
+title: "QMSS:DataVisaulization_HW1"
+course: "QMSS-G5063-2019 Data Vizualization"
+author: Tianyi Hu
+date: 2019-02-25
+output: html_document
+---
+
+```{r Setup, include=FALSE, results='hide', warning=FALSE}
+library(knitr)
+opts_chunk$set(fig.path="figures/",
+               cache.path="cache/",
+               cache=FALSE,
+               echo=TRUE,
+               message=FALSE,
+               warning=FALSE)  
+```  
+## Assignment 1: Using ggplot2 for visualization
+##Summer Olympics Medals over Time
+
+Imagine you are the data scientist at a respected media outlet ??? say the "New York Times". For the upcoming Olympics coverage next year, your editor-in-chief asks you to analyze some data on the history of Summer Olympics Medals by Year, Country, Event and Gender and prepare some data visualizations in which you outline the main patterns around which to base the story.
+
+###  Task 1
+###1. Medal Counts over Time
+
+Combine the information in the three spreadsheets athletes_and_events.csv, noc_regions.csv, and gdp_pop.csv. Note, that the noc_regions.csv is the set all NOC regions, while gdp_pop.csv only contains a snapshot of the current set of countries. You have to decide what to do with some countries that competed under different designations in the past (e.g. Germany and Russia) and some defunct countries and whether and how to combine their totals. Make sure to be clear about your decisions here, so that the editor (and potentially a user of your visualizations) understands what you did.
+
+Calculate a summary of how many summer games each country competed in, and how many medals of each type the country won. Use that summary to provide a visual comparison of medal count by country.
+
+Feel free to focus on smaller set of countries (say the top 10), highlight the United States or another country of your choice, consider gender of the medal winners etc. to make the visualization interesting.
+
+Please provide one visualization showing an over time comparison and one in which a total medal count (across all Summer Olympics) is used. Briefly discuss which visualization you recommend to your editor and why.
+
+Bonus Point: Currently, the medal data contains information on each athlete competing, including for team events. For example, in 2016 China received 12 gold medals for their women???s win in volleyball alone. Since this is usually not how it is done in official medal statistics, try to wrangle the data so that team events are counted as a single medal.
+  
+```{r}
+athelets<-read.csv("athletes_and_events.csv")
+gdp<-read.csv("gdp_pop.csv")
+noc<-read.csv("noc_regions.csv")
+merge1=merge(athelets,noc, by = "NOC")
+names(gdp)[1:2]<-c("Country","NOC") 
+total=merge(merge1,gdp, by = "NOC")
+
+#1(b)
+table_summer=subset(total,total$Season=="Summer")
+table_count=table_summer[,-c(2:3,5:9,11:14,16:20)]
+require(dplyr)
+medal_count <- table_count%>% 
+  group_by(NOC) %>%
+  summarize(Gold = length(which(Medal=="Gold")), Silver = length(which(Medal=="Silver")), Bronze = length(which(Medal=="Bronze")),Total_Medal = Gold + Silver + Bronze) %>%
+  arrange(desc(.$Total_Medal)) 
+year_count <- table_count%>% 
+  mutate(number=1) %>%
+  group_by(NOC) %>%
+  count(Year,number) %>%
+  summarize(Times = length(number)) %>%
+  arrange(desc(.$Times)) 
+total_count=merge(medal_count,year_count, by = "NOC" )
+total_count=arrange(total_count, desc(Total_Medal))
+total_count=head(total_count, 10)
+test1 <- table_count[ which( table_count$NOC == "USA" | table_count$NOC == "GBR" | table_count$NOC == "GER" | table_count$NOC == "FRA"| table_count$NOC == "ITA" | table_count$NOC == "AUS" | table_count$NOC == "HUN"| table_count$NOC == "SWE"| table_count$NOC == "NED"| table_count$NOC == "CHN") , ]   
+test2<-na.omit(test1)
+test3 <- test2%>% 
+  mutate(number=1) %>%
+  group_by(NOC) %>%
+  summarize(Number=length(number)) %>%
+  arrange(desc(.$Number)) 
+test4=merge(test2,test3, by = "NOC")
+test4=arrange(test4,Number)
+medal_count_2 <- table_count%>% 
+  group_by(Year,NOC) %>%
+  summarize(Gold = length(which(Medal=="Gold")), Silver = length(which(Medal=="Silver")), Bronze = length(which(Medal=="Bronze")),Total_Medal = Gold + Silver + Bronze) %>%
+  arrange(desc(.$NOC))
+test5 <- medal_count_2[ which( medal_count_2$NOC == "USA" | medal_count_2$NOC == "GBR" |medal_count_2$NOC == "GER" | medal_count_2$NOC == "FRA"|medal_count_2$NOC == "ITA" | medal_count_2$NOC == "AUS" | medal_count_2$NOC == "HUN"| medal_count_2$NOC == "SWE"| medal_count_2$NOC == "NED"| medal_count_2$NOC == "CHN") , ]   
+
+#install packages
+library(ggplot2)
+#install.packages("plotly")
+library("plotly")
+#install.packages("ggthemes")
+library(ggthemes)
+#install.packages("hchart")
+
+#plot
+
+ggplot(total_count, aes(x = reorder(NOC, Total_Medal), y=Total_Medal)) +geom_bar(stat="identity")+ xlab("Countries") + ylab("Number of Medals") + ggtitle("Top 10 Summer Olympic Medal Countries") 
+```
+  
+#####  This is the barplot of Top 10 countries who won the most Summer Olympic Games medal  
+  
+   
+```{r}
+ggplot(test4, aes(reorder(NOC, -Number))) +geom_bar(aes(fill=Medal))+scale_fill_manual(values=c('#A58B52','#E8BE5C','#E0DFD5'))+ xlab("Countries") + ylab("Number of Medals") + ggtitle("Top 10 Summer Olympic Medal Countries") +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+ggplot(test4, aes(reorder(NOC, -Number)))+geom_bar(aes(fill=Medal),position = "fill")+scale_fill_manual(values=c('#A58B52','#E8BE5C','#E0DFD5'))+ xlab("Countries") + ylab("Number of Medals") + ggtitle("Top 10 Summer Olympic Medal Countries") +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+ggplot(test4, aes(reorder(NOC, -Number)))+geom_bar(aes(fill=Medal),position = "dodge")+scale_fill_manual(values=c('#A58B52','#E8BE5C','#E0DFD5'))+ xlab("Countries") + ylab("Number of Medals") + ggtitle("Top 10 Summer Olympic Medal Countries") +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+ggplot(test4, aes(reorder(NOC, -Number))) +geom_bar(aes(fill=Medal))+facet_grid(~Sex)+scale_fill_manual(values=c('#A58B52','#E8BE5C','#E0DFD5'))+ xlab("Countries") + ylab("Number of Medals") + ggtitle("Top 10 Summer Olympic Medal Countries") +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+```
+  
+##### This is the adjusted barplot of Top 10 countries who won the most Summer Olympic Games medal. I seperated the medals into Gold, Silver and Bronze.  
+
+#### I also seperated sex in the lase picture. We could see that the average number of medals men have are always more than the average number of medals women achieve.
+   
+    
+```{r}
+ggplot(test5,aes(x=Year,y=Total_Medal,group=NOC,color=NOC))+geom_line(size=1)+ xlab("Year") + ylab("Number of Medals") + ggtitle("Top 10 Summer Olympic Medal Countries") +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+library(dplyr, warn.conflicts = FALSE)
+d_filtered <- test5 %>%
+  group_by(NOC) %>% 
+  filter(NOC=="USA") %>%
+  ungroup()
+ggplot() +
+  # draw the original data series with grey
+  geom_line(aes(Year, Total_Medal, group = NOC), data = test5, colour = alpha("grey", 0.7)) +
+  # colourise only the filtered data
+  geom_line(aes(Year, Total_Medal, colour = NOC), data = d_filtered)+ xlab("Year") + ylab("Number of Medals") + ggtitle("Top 10 Summer Olympic Medal Countries")+theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5)) 
+```
+  
+##### This is the line plot of the number of medals Top 10 countries who won the most Summer Olympic Games medal have each year. 
+
+#####  I also highlighted United States in the red color, and we could see that the number of medals US achieved each year was always nearly the most in that year.
+   
+## 2. Medal Counts adjusted by Population, GDP
+
+There are different ways to calculate ???success???. Consider the following variants and choose one (and make sure your choice is clear in the visualization):
+- Just consider gold medals.
+- Simply add up the number of medals of different types.
+- Create an index in which medals are valued differently. (gold=3, silver=2, bronze=1).
+- A reasonable other way that you prefer.
+
+Now, adjust the ranking of medal success by (a) GDP per capita and (b) population. You have now three rankings: unadjusted ranking, adjusted by GDP per capita, and adjusted by population.
+
+Visualize how these rankings differ. Feel free to highlight a specific pattern (e.g. ???South Korea ??? specialization reaps benefits??? or ???The superpowers losing their grip???).
+  
+```{r}
+#2
+un_rank <- total_count 
+un_rank=arrange(un_rank, desc(Gold))
+un_rank=head(un_rank, 10)
+medal_count <- table_count%>% 
+  group_by(NOC) %>%
+  summarize(Gold = length(which(Medal=="Gold")), Silver = length(which(Medal=="Silver")), Bronze = length(which(Medal=="Bronze")),Total_Medal = Gold + Silver + Bronze) %>%
+  arrange(desc(.$Total_Medal)) 
+year_count <- table_count%>% 
+  mutate(number=1) %>%
+  group_by(NOC) %>%
+  count(Year,number) %>%
+  summarize(Times = length(number)) %>%
+  arrange(desc(.$Times)) 
+total_count=merge(medal_count,year_count, by = "NOC" )
+total_count=arrange(total_count, desc(Total_Medal))
+gdp_total =merge(total_count ,gdp, by = "NOC")
+gdp_rank <- gdp_total%>% 
+  mutate(gdp_total=Gold/GDP.per.Capita) %>%
+  mutate(pop_total=Gold/Population) %>%
+  arrange(desc(.$gdp_total)) 
+gdp_rank=head(gdp_rank, 10)
+pop_rank <- gdp_total%>% 
+  mutate(pop_total=Gold/Population) %>%
+  arrange(desc(.$pop_total)) 
+pop_rank=head(pop_rank, 10)
+#plot-un_rank
+un_rank<-arrange(un_rank,-Gold)%>%transform(id=1:10)
+ggplot(un_rank,aes(x = reorder(NOC, Gold), y=Gold,label=NOC)) + 
+  geom_bar(stat = "identity",aes(fill = NOC)) + xlab("Countries") + ylab("Number of Gold Medals") + ggtitle("Top 10 Countries in Gold Medals (unadjusted)")+ 
+  scale_fill_manual("Countries", values = c("USA" = "#ef0707", "GBR" = "#e84717", "GER" = "#e84e16", "ITA"="#e86615", "FRA"="#e87e14", "HUN"="#e89a13", "SWE"="#e8af12", "AUS"="#e8c711", "CHN"="#e8e011", "RUS"="#cbe811"))+
+  coord_polar(start=2.5*pi) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks= element_blank(),
+    axis.title = element_blank()
+  )+geom_text(aes(label = id))+theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+ggplot(un_rank, aes(x = reorder(NOC, -Gold), y=Gold)) + 
+  labs(x="Country",y="Number of Gold Medals",title = "Top 10 Countries in Gold Medals (Unadjusted)") +
+  geom_bar(stat = "identity",aes(fill=reorder(NOC, -Gold))) +
+  scale_fill_manual(values=c("#EF0707","#e84717","#e84e16","#e86615","#e87e14","#e89a13","#e8af12","#e8c711","#e8e011","#cbe811"))+
+  geom_text(aes(label = id),size = 3, colour = 'white', vjust = 1)+
+  theme(
+  panel.grid = element_blank(),
+  panel.background = element_blank(),
+  axis.text.y = element_blank(),
+  ) +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+
+#plot-gdp_adjusted
+gdp_rank<-arrange(gdp_rank,-gdp_total)%>%transform(id=1:10)
+ggplot(gdp_rank,aes(x = reorder(Country,gdp_total), y=gdp_total,label=NOC)) + 
+  geom_bar(stat = "identity",aes(fill = Country)) + xlab("Countries") + ylab("Number of Gold Medals (GDP adjusted)") + ggtitle("Top 10 Countries in Gold Medals (GDP adjusted)")+ 
+  scale_fill_manual("Countries", values = c("India" = "#ef0707", "United States" = "#e84717", "China" = "#e84e16", "Ethiopia"="#e86615", "Hungary"="#e87e14", "Russia"="#e89a13", "Pakistan"="#e8af12", "Kenya"="#e8c711", "Ukraine"="#e8e011", "Zimbabwe"="#cbe811"))+
+  coord_polar(start=2.5*pi) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks= element_blank(),
+    axis.title = element_blank()
+  )+geom_text(aes(label = id))+theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+ggplot(gdp_rank, aes(x = reorder(NOC, -gdp_total), y=gdp_total)) + 
+  labs(x="Country",y="Number of Gold Medals(GDP adjusted)",title = "Top 10 Countries in Gold Medals (GDP adjusted)") +
+  geom_bar(stat = "identity",aes(fill=reorder(NOC, -gdp_total))) +
+  scale_fill_manual(values=c("#EF0707","#e84717","#e84e16","#e86615","#e87e14","#e89a13","#e8af12","#e8c711","#e8e011","#cbe811"))+
+  geom_text(aes(label = id),size = 3, colour = 'white', vjust = 1)+
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    axis.text.y = element_blank(),
+  ) +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+#plot_pop_adjusted
+pop_rank<-arrange(pop_rank,-pop_total)%>%transform(id=1:10)
+ggplot(pop_rank,aes(x = reorder(Country,pop_total), y=pop_total,label=NOC)) + 
+  geom_bar(stat = "identity",aes(fill = Country)) + xlab("Countries") + ylab("Number of Gold Medals (Populatiion adjusted)") + ggtitle("Top 10 Countries in Gold Medals (Population adjusted)")+ 
+  scale_fill_manual("Countries", values = c("Hungary" = "#ef0707", "Norway" = "#e84717", "Sweden" = "#e84e16", "Bahamas"="#e86615", "Denmark"="#e87e14", "Finland"="#e89a13", "New Zealand"="#e8af12", "Fiji"="#e8c711", "Netherlands"="#e8e011", "Cuba"="#cbe811"))+
+  coord_polar(start=2.5*pi) +
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    axis.text.y = element_blank(),
+    axis.ticks= element_blank(),
+    axis.title = element_blank()
+  )+geom_text(aes(label = id))+theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+ggplot(pop_rank, aes(x = reorder(NOC, -pop_total), y=pop_total)) + 
+    labs(x="Country",y="Number of Gold Medals(GDP adjusted)",title = "Top 10 Countries in Gold Medals (GDP adjusted)") +
+    geom_bar(stat = "identity",aes(fill=reorder(NOC, -pop_total))) +
+    scale_fill_manual(values=c("#EF0707","#e84717","#e84e16","#e86615","#e87e14","#e89a13","#e8af12","#e8c711","#e8e011","#cbe811"))+
+    geom_text(aes(label = id),size = 3, colour = 'white', vjust = 1)+
+    theme(
+      panel.grid = element_blank(),
+      panel.background = element_blank(),
+      axis.text.y = element_blank(),
+    ) +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+```
+  
+#####  I used three plots above to show the adjusted ranking of each method. First, I output the plot of unadjusted ranking. We could see that USA ranked No.1 in the graph, and China ranked 9th. Second, I output the plot of GDP adjusted ranking. I used the fomula "Total Medals/GDP per capital" to adjust the ranking. We could see that USA ranked 2nd in the graph, and China ranked 3rd. Last, I output the plot of Population adjusted ranking. I used the fomula "Total Medals/Population" to adjust the ranking. We could see that both USA and China are not in the list. Bahamas and Cuba, whose atheletes are always very strong, ranked 4th and 10th, according to the population adjusted method. In this case, I also output the "windrose map" of each ranking list, to make the plot much more interesting for reading.  
+   
+   
+##3. Host Country Advantage
+
+Until the 2016 Rio Summer Olympics (our data ends here), there were 23 host cities. Calculate whether the host nation had an advantage. That is calculate whether the host country did win more medals when the Summer Olympics was in their country compared to other times.
+    
+        
+```{r}
+#3
+
+#install.packages("rvest")
+library(rvest)
+#install.packages("stringr")
+library(stringr)
+wiki_hosts <- read_html("https://en.wikipedia.org/wiki/Summer_Olympic_Games")
+hosts <- html_table(html_nodes(wiki_hosts, "table")[[8]], fill=TRUE)
+hosts <- hosts[2:32,1:3]
+hosts$city <- str_split_fixed(hosts$Host, n=2, ", ")[,1]
+hosts$country <- str_split_fixed(hosts$Host, n=2, ", ")[,2]
+hosts$country[hosts$Year=='1916'] = 'Germany'
+hosts$country[hosts$Year=='1940'] = 'Finland'
+hosts$country[hosts$Year=='1944'] = 'United Kingdom'
+hosts$country[hosts$country=='United Kingdom'] = 'UK'
+hosts$country[hosts$country=='United States'] = 'USA'
+
+noc_no_dup = noc[-c(8,148,89,27,198,71,77,174,52,127,144,67,215,176,228,224,223,225,227,168),]
+
+hosts$country = as.factor(hosts$country)
+host_noc = merge(hosts, noc_no_dup, by.x = 'country', by.y = 'region')
+host_medal = merge(host_noc, medal_count_2, by = c('Year', "NOC"))
+
+medal_count_test10 <- medal_count_2%>% 
+  group_by(Year) %>%
+  summarise(Total_Medal_Year=sum(Total_Medal))%>%
+  arrange(desc(.$Year)) 
+host_total= merge(host_medal, medal_count_test10)
+host_total$host_percent = host_total$Total_Medal / host_total$Total_Medal_Year * 100
+
+test11 = merge(medal_count_test10, medal_count_2)
+
+test11$percent = test11$Total_Medal / test11$Total_Medal_Year * 100
+test12 <- test11%>% 
+  group_by(NOC) %>%
+  summarise(host_percent=mean(percent))
+test12$is_host = FALSE
+host_total$is_host = TRUE
+host_total = select(host_total, NOC, host_percent, is_host)
+test12 = test12 %>% filter(NOC %in% host_total$NOC)
+host_host=rbind(test12,host_total)
+
+library(ggplot2)
+ggplot(host_host, aes(x = NOC, y = host_percent, fill = is_host)) +
+  geom_bar(position="dodge", stat="identity")+
+  scale_fill_manual(values = c("#999791","#f46607"))+
+  labs(x="Country",y="Percentage",title = "Host Country Advantage") +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5))
+```
+
+##### In this case, in order to calculate and compare the host country advantage, I used to column to have a comparison. The first is average medal percentage, which is the average of total number of medals one country had in one year divided the total number of Olympics medals that year. The other one is host medal percentage, which is the number of medals the host country had in the host year divided the total number of Olympics medals that year. This two percentage can show the difference between host year and non-host years. In the bar chart, we could clearly see that in the host country, the total percentage of medals are always higher than non-host years.
+
+##4. Most successful athletes
+
+Now, let???s look at the most successful athletes. Provide a visual display of the most successful athletes of all time.
+
+Choose one or two additional dimensions among gender, height, weight, sport, discipline, event, year, and country to highlight an interesting pattern in the data.
+     
+    
+```{r}
+#4
+athelets_medal <- athelets%>% 
+  group_by(Name) %>%
+  summarize(Gold = length(which(Medal=="Gold")), Silver = length(which(Medal=="Silver")), Bronze = length(which(Medal=="Bronze")),Total_Medal = Gold + Silver + Bronze) %>%
+  arrange(desc(.$Total_Medal))
+
+athelets_top = athelets_medal[1:20,]
+for (i in 1:nrow(athelets_top)) {
+  athelets_top$Sex[i] = as.character(athelets$Sex[athelets$Name == athelets_top$Name[i]])[1]
+}
+
+
+athelets_medal=head(athelets_medal,10)
+ggplot(athelets_medal, aes(x = reorder(Name, -Total_Medal), y=Total_Medal)) + 
+  labs(x="Name",y="Number of Total Medals",title = "Top 10 Successful Atheletes in Total Medals") +
+  geom_bar(stat = "identity",aes(fill=reorder(Name, -Total_Medal))) +
+  scale_fill_manual(values=c("#EF0707","#e84717","#e84e16","#e86615","#e87e14","#e89a13","#e8af12","#e8c711","#e8e011","#cbe811"))+
+  geom_text(aes(label = Total_Medal),size = 3, colour = 'white', vjust = 1)+
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    axis.text.y = element_blank(),
+  ) +theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5),axis.text.x = element_text(size = 9,angle = 45,hjust = 1))
+
+ggplot(athelets_top, aes(x = reorder(Name, -Total_Medal), y=Total_Medal)) + 
+  labs(x="Name",y="Number of Total Medals",title = "Top 20 Successful Atheletes in Total Medals") +
+  geom_bar(stat = "identity",aes(fill=reorder(Name, -Total_Medal))) +
+  scale_fill_manual(values=c("#EF0707","#EF0707","#e84717","#e84717","#e84e16","#e84e16","#e86615","#e86615","#e87e14","#e87e14","#e89a13","#e89a13","#e8af12","#e8af12","#e8c711","#e8c711","#e8e011","#e8e011","#cbe811","#cbe811"))+
+  geom_text(aes(label = Total_Medal),size = 3, colour = 'white', vjust = 1)+
+  theme(
+    panel.grid = element_blank(),
+    panel.background = element_blank(),
+    axis.text.y = element_blank(),
+  ) +facet_grid(rows = vars(Sex))+
+  theme(title=element_text(size=15, color="black", face= "bold", vjust=0.5, hjust=0.5),axis.text.x = element_text(size = 9,angle = 45,hjust = 1))
+```
+    
+##### In this case, in order to choose the Top 10 successful atheletes in the Summer Olympic Games, I calculated the total medals each athlete has in total years, and output the Top 10 athletes in the bar chart. I also seperated into female and male in the barchart, which would be easier for us to read that the difference between successful female athletes and male athletes.
+    
+##Interactivity
+##5. Make two plots interactive
+
+Choose 2 of the plots you created above and add interactivity. Briefly describe to the editor why interactivity in these visualization is particularly helpful for a reader.
+  
+```{r}
+#5
+library(plotly)
+plot_ly(test5, 
+        x = ~Year, 
+        y = ~Total_Medal, 
+        color= ~NOC, 
+        type = "scatter", 
+        mode='markers') %>%
+  layout(xaxis = list(type="log"))  
+medal_count_ad=head(medal_count,10)
+plot_ly(medal_count_ad, 
+        x = ~reorder(NOC, -Total_Medal), 
+        y = ~Total_Medal, 
+        type = "bar",
+        color = ~reorder(NOC, -Total_Medal)
+        )
+```
+
+##### In this part, I choose to make the scatter point and bar chart interactive. An interactive chart is a chart on which you can make a point, zoom, play with axis, add a button and so on. It has several advantages. It carries more information using the hovering facility. It allows the reader to go deeper in its understanding of data.
+
+##6. Data Table
+
+Prepare a selected dataset and add a datatable to the output. Make sure the columns are clearly labelled. Select the appropriate options for the data table (e.g. search bar, sorting, column filters etc.). Suggest to the editor which kind of information you would like to provide in a data table in the online version of the article and why.
+  
+   
+```{r}
+#6
+library(DT)
+datatable(total_count)
+
+```
+     
+#####  This is the data table of the number of each country had in each Olympic year. In this table, we could know that the number of gold, silver, bronze and total medals each Olympic year of each country. We could rank high to low to know about each country.It is easy to customize the style (cell borders, row striping, and row highlighting, etc), theme (default or Bootstrap), row/column names, table caption, and so on.
+
+    
